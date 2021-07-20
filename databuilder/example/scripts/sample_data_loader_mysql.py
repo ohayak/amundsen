@@ -25,7 +25,7 @@ import logging
 import os
 import sys
 import uuid
-
+import pymysql
 from amundsen_common.models.index_map import DASHBOARD_ELASTICSEARCH_INDEX_MAPPING, USER_INDEX_MAP
 from elasticsearch import Elasticsearch
 from pyhocon import ConfigFactory
@@ -48,7 +48,7 @@ es_port = os.getenv('CREDENTIALS_ELASTICSEARCH_PROXY_PORT', 9200)
 
 mysql_host = os.getenv('CREDENTIALS_MYSQL_PROXY_HOST', 'localhost')
 mysql_port = os.getenv('CREDENTIALS_MYSQL_PROXY_PORT', 3306)
-mysql_db = os.getenv('CREDENTIALS_MYSQL_PROXY_DATABASE', 'test')
+mysql_db = os.getenv('CREDENTIALS_MYSQL_PROXY_DATABASE', 'amundsen')
 
 if len(sys.argv) > 1:
     es_host = sys.argv[1]
@@ -59,8 +59,10 @@ es = Elasticsearch([
     {'host': es_host, 'port': es_port},
 ])
 
-mysql_user = 'root'
-mysql_password = 'password'
+pymysql.install_as_MySQLdb()
+
+mysql_user = 'amundsen'
+mysql_password = 'amundsen'
 
 mysql_conn_string = f'mysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}'
 

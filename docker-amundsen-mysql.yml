@@ -1,29 +1,32 @@
 version: "3"
 services:
-  neo4j:
-    image: neo4j:3.5.26
-    container_name: neo4j_amundsen
+  mysql:
+    image: mariadb:10.6
+    container_name: mysql_amundsen
     environment:
-      - NEO4J_AUTH=neo4j/test
+      - MYSQL_USER=amundsen
+      - MYSQL_PASSWORD=amundsen
+      - MYSQL_DATABASE=amundsen
     ulimits:
       nofile:
         soft: 40000
         hard: 40000
     ports:
-      - 7474:7474
-      - 7687:7687
+      - 3306:3306
     volumes:
-      - ./example/docker/neo4j/conf:/var/lib/neo4j/conf
-      - ./.local/neo4j/data:/data
+      - ./.local/mysql/data:/var/lib/mysql
     networks:
       - amundsennet
   elasticsearch:
-    image: elasticsearch:6.7.0
+    image: elasticsearch:7.13.3
     container_name: es_amundsen
     ports:
       - 9200:9200
+      - 9300:9300
     networks:
       - amundsennet
+    environment:
+      - discovery.type=single-node
     ulimits:
       nofile:
         soft: 65536
@@ -35,25 +38,24 @@ services:
     container_name: amundsensearch
     ports:
       - 5001:5001
-    depends_on:
-      - elasticsearch
     networks:
       - amundsennet
     environment:
       - PROXY_ENDPOINT=es_amundsen
   amundsenmetadata:
     build:
+      args:
+        SQLALCHEMY_DATABASE_URI: mysql://amundsen:amundsen@mysql_amundsen:3306/amundsen
+        METADATA_SVC_CONFIG_MODULE_CLASS: metadata_service.config.MySQLConfig
       context: .
-      dockerfile: Dockerfile.metadata.public
+      dockerfile: Dockerfile.metadata-mysql.public
     container_name: amundsenmetadata
     depends_on:
-      - neo4j
+      - mysql
     ports:
       - 5002:5002
     networks:
       - amundsennet
-    environment:
-      - PROXY_HOST=bolt://neo4j_amundsen
   amundsenfrontend:
     build:
       context: .

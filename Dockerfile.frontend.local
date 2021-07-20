@@ -1,7 +1,4 @@
-ARG METADATASERVICE_BASE
-ARG SEARCHSERVICE_BASE
-
-FROM node:12-slim as node-stage
+FROM node:12 as node-stage
 WORKDIR /app/amundsen_application/static
 
 COPY ./frontend/amundsen_application/static/package.json /app/amundsen_application/static/package.json
@@ -14,16 +11,14 @@ RUN npm run dev-build
 
 COPY ./frontend /app
 
-FROM python:3.7-slim
+FROM python:3.7-slim as base
 WORKDIR /app
+RUN pip3 install gunicorn
 
+COPY --from=node-stage /app /app
 COPY ./frontend /app
 COPY requirements-dev.txt /app/requirements-dev.txt
 COPY requirements-common.txt /app/requirements-common.txt
-
-COPY --from=node-stage /app /app
-
 RUN pip3 install -e .
 
-ENTRYPOINT [ "python3" ]
-CMD [ "amundsen_application/wsgi.py" ]
+CMD [ "python3",  "amundsen_application/wsgi.py" ]
