@@ -9,13 +9,13 @@ RUN apt-get install git -y
 COPY ./metadata/ /app
 COPY requirements-dev.txt /app/requirements-dev.txt
 COPY requirements-common.txt /app/requirements-common.txt
+RUN pip3 install -e .
 
 CMD [ "python3", "metadata_service/metadata_wsgi.py" ]
 
 FROM base as oidc-release
 
-RUN  pip3 install -e .&& \
-     pip3 install -e .[oidc]
+RUN pip3 install -e .[oidc]
 
 ENV FLASK_APP_MODULE_NAME flaskoidc
 ENV FLASK_APP_CLASS_NAME FlaskOIDC

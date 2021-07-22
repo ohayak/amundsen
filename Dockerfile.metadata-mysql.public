@@ -1,35 +1,28 @@
 FROM python:3.7-slim as base
+ARG PROXY_HOST
+ARG PROXY_PORT
+ARG PROXY_USER
+ARG PROXY_PASSWORD
+
+ENV PROXY_HOST $PROXY_HOST
+ENV PROXY_PORT $PROXY_PORT
+ENV PROXY_USER $PROXY_USER
+ENV PROXY_PASSWORD $PROXY_PASSWORD
+ENV SQLALCHEMY_DATABASE_URI mysql://$PROXY_USER:$PROXY_PASSWORD@$PROXY_HOST:$PROXY_PORT/amundsen
+ENV METADATA_SVC_CONFIG_MODULE_CLASS metadata_service.config.MySQLConfig
+ENV FLASK_APP metadata_service/metadata_wsgi.py
+
 WORKDIR /app
 RUN pip3 install gunicorn
 
 RUN apt-get update 
 RUN apt-get upgrade -y
 RUN apt-get install netcat wget git -y
-RUN apt-get install gcc python-mysqldb libmariadbclient-dev -y
+RUN apt-get install gcc mariadb-client python-mysqldb libmariadbclient-dev -y
 
 COPY ./metadata/ /app
 COPY requirements-dev.txt /app/requirements-dev.txt
 COPY requirements-common.txt /app/requirements-common.txt
-RUN  pip3 install -e .
-CMD ["python3", "metadata_service/metadata_wsgi.py"]
-
-FROM base as oidc-release
-RUN pip3 install -e .[oidc]
-ENV FLASK_APP_MODULE_NAME flaskoidc
-ENV FLASK_APP_CLASS_NAME FlaskOIDC
-ENV FLASK_OIDC_WHITELISTED_ENDPOINTS status,healthcheck,health
-
-# You will need to set these environment variables in order to use the oidc image
-# FLASK_OIDC_CLIENT_SECRETS - a path to a client_secrets.json file
-# FLASK_OIDC_SECRET_KEY - A secret key from your oidc provider
-# You will also need to mount a volume for the clients_secrets.json file.
-
-FROM base as rds-release
-RUN pip3 install -e .[rds]
-ARG SQLALCHEMY_DATABASE_URI
-ARG METADATA_SVC_CONFIG_MODULE_CLASS
-ENV SQLALCHEMY_DATABASE_URI $SQLALCHEMY_DATABASE_URI
-ENV METADATA_SVC_CONFIG_MODULE_CLASS $METADATA_SVC_CONFIG_MODULE_CLASS
-ENV FLASK_APP metadata_service/metadata_wsgi.py
-RUN wget -qO- https://raw.githubusercontent.com/eficode/wait-for/v2.1.2/wait-for | sh -s -- mysql_amundsen:3306 -- flask initdb
-
+RUN  pip3 install -e .[rds]
+RUN metadata_service/initdb.sh
+CMD ["python3", "$FLASK_APP"]

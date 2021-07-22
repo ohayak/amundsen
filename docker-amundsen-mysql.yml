@@ -4,6 +4,7 @@ services:
     image: mariadb:10.6
     container_name: mysql_amundsen
     environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=true
       - MYSQL_USER=amundsen
       - MYSQL_PASSWORD=amundsen
       - MYSQL_DATABASE=amundsen
@@ -18,7 +19,7 @@ services:
     networks:
       - amundsennet
   elasticsearch:
-    image: elasticsearch:7.13.3
+    image: 192.168.10.49:8082/aitrust/elasticsearch:6
     container_name: es_amundsen
     ports:
       - 9200:9200
@@ -45,8 +46,10 @@ services:
   amundsenmetadata:
     build:
       args:
-        SQLALCHEMY_DATABASE_URI: mysql://amundsen:amundsen@mysql_amundsen:3306/amundsen
-        METADATA_SVC_CONFIG_MODULE_CLASS: metadata_service.config.MySQLConfig
+        PROXY_HOST: mysql_amundsen
+        PROXY_PORT: 3306
+        PROXY_USER: amundsen
+        PROXY_PASSWORD: amundsen
       context: .
       dockerfile: Dockerfile.metadata-mysql.public
     container_name: amundsenmetadata
